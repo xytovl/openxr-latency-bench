@@ -728,7 +728,7 @@ void application::loop()
 
 		r->end_frame();
 
-		xr_session.end_frame(framestate.predictedDisplayPeriod, layers);
+		xr_session.end_frame(framestate.predictedDisplayTime, layers);
 
 		vk_device.waitIdle();
 	}
