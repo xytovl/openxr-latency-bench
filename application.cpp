@@ -714,7 +714,7 @@ void application::loop()
 		xr_session.begin_frame();
 
 		cmd_buf.begin(vk::CommandBufferBeginInfo{.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
-		auto layer = r->render(cmd_buf, framestate);
+		auto layer = r->render(cmd_buf, framestate, space_left_grip, space_right_grip);
 
 		std::vector<XrCompositionLayerBaseHeader*> layers;
 		layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&layer));

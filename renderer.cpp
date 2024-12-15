@@ -30,7 +30,7 @@ extern const std::map<std::string, std::vector<uint32_t>> shaders;
 
 struct push_constants
 {
-	float r,g,b,t;
+	float r, g, b, t;
 };
 
 renderer::renderer(vk::raii::Device & device, xr::session & session, vk::Extent2D image_size) :
@@ -141,7 +141,8 @@ renderer::renderer(vk::raii::Device & device, xr::session & session, vk::Extent2
 
 	        return vk::raii::Pipeline{device, nullptr, pipeline_info};
         }(device, layout, renderpass, image_size)),
-        space_local(session.create_reference_space(XR_REFERENCE_SPACE_TYPE_LOCAL))
+        space_local(session.create_reference_space(XR_REFERENCE_SPACE_TYPE_LOCAL)),
+        space_view(session.create_reference_space(XR_REFERENCE_SPACE_TYPE_VIEW))
 {
 	for (auto & swapchain: swapchains)
 	{
@@ -188,18 +189,50 @@ vk::raii::Framebuffer & renderer::get_framebuffer(VkImage image)
 	return image_views.emplace(std::make_pair(image, std::make_pair(std::move(iv), vk::raii::Framebuffer{device, fb_create_info}))).first->second.second;
 }
 
-XrCompositionLayerProjection renderer::render(vk::CommandBuffer command_buffer, const XrFrameState & frame_state)
+static XrSpaceVelocity locate_space(XrSpace space, XrSpace reference, XrTime time)
+{
+	XrSpaceVelocity velocity{
+	        .type = XR_TYPE_SPACE_VELOCITY,
+	};
+
+	XrSpaceLocation location{
+	        .type = XR_TYPE_SPACE_LOCATION,
+	        .next = &velocity,
+	};
+
+	xrLocateSpace(space, reference, time, &location);
+
+	return velocity;
+}
+
+static bool test_space(XrSpaceVelocity a, float threshold_m_s)
+{
+	if (a.velocityFlags & XR_SPACE_VELOCITY_LINEAR_VALID_BIT)
+	{
+		const auto & v = a.linearVelocity;
+		auto v2 = v.x * v.x + v.y * v.y + v.z * v.z;
+		if (v2 > threshold_m_s * threshold_m_s)
+			return true;
+	}
+	return false;
+}
+
+XrCompositionLayerProjection renderer::render(vk::CommandBuffer command_buffer, const XrFrameState & frame_state, XrSpace space_left, XrSpace space_right)
 {
 	auto [flags, views] = session.locate_views(XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, frame_state.predictedDisplayTime, space_local);
+
+	auto vel_view = locate_space(space_view, space_local, frame_state.predictedDisplayTime);
+	auto vel_left = locate_space(space_left, space_local, frame_state.predictedDisplayTime);
+	auto vel_right = locate_space(space_right, space_local, frame_state.predictedDisplayTime);
 
 	if (t0 == 0)
 		t0 = frame_state.predictedDisplayTime / 1'000'000'000.0;
 
 	push_constants pcs{
-		.r = 1,
-		.g = 1,
-		.b = 1,
-		.t = frame_state.predictedDisplayTime / 1'000'000'000.0f - t0,
+	        .r = 0.2f,
+	        .g = test_space(vel_view, 0.005) or test_space(vel_left, 0.005) or test_space(vel_right, 0.005) ? 1.f : 0.2f,
+	        .b = 0.2f,
+	        .t = frame_state.predictedDisplayTime / 1'000'000'000.0f - t0,
 	};
 
 	for (int swapchain_index = 0; swapchain_index < 2; swapchain_index++)
@@ -246,8 +279,8 @@ XrCompositionLayerProjection renderer::render(vk::CommandBuffer command_buffer, 
 		layer_views[swapchain_index] =
 		        {
 		                .type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW,
-				.pose = views[swapchain_index].pose,
-				.fov = views[swapchain_index].fov,
+		                .pose = views[swapchain_index].pose,
+		                .fov = views[swapchain_index].fov,
 		                .subImage = {
 		                        .swapchain = swapchains[swapchain_index],
 		                        .imageRect = {

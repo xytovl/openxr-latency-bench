@@ -37,6 +37,7 @@ class renderer
 	vk::raii::Pipeline pipeline;
 
 	xr::space space_local;
+	xr::space space_view;
 	std::array<xr::swapchain, 2> swapchains;
 	std::array<XrCompositionLayerProjectionView, 2> layer_views;
 
@@ -49,6 +50,6 @@ class renderer
 public:
 	renderer(vk::raii::Device & device, xr::session & session, vk::Extent2D image_size);
 
-	XrCompositionLayerProjection render(vk::CommandBuffer command_buffer, const XrFrameState & frame_state);
+	XrCompositionLayerProjection render(vk::CommandBuffer command_buffer, const XrFrameState & frame_state, XrSpace space_left, XrSpace space_right);
 	void end_frame();
 };
