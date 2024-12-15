@@ -44,6 +44,8 @@ class renderer
 
 	vk::raii::Framebuffer & get_framebuffer(VkImage image);
 
+	float t0;
+
 public:
 	renderer(vk::raii::Device & device, xr::session & session, vk::Extent2D image_size);
 

@@ -30,7 +30,7 @@ extern const std::map<std::string, std::vector<uint32_t>> shaders;
 
 struct push_constants
 {
-	int x;
+	float r,g,b,t;
 };
 
 renderer::renderer(vk::raii::Device & device, xr::session & session, vk::Extent2D image_size) :
@@ -147,6 +147,8 @@ renderer::renderer(vk::raii::Device & device, xr::session & session, vk::Extent2
 	{
 		swapchain = xr::swapchain(session, device, format, image_size.width, image_size.height);
 	}
+
+	t0 = 0;
 }
 
 vk::raii::Framebuffer & renderer::get_framebuffer(VkImage image)
@@ -190,6 +192,16 @@ XrCompositionLayerProjection renderer::render(vk::CommandBuffer command_buffer, 
 {
 	auto [flags, views] = session.locate_views(XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, frame_state.predictedDisplayTime, space_local);
 
+	if (t0 == 0)
+		t0 = frame_state.predictedDisplayTime / 1'000'000'000.0;
+
+	push_constants pcs{
+		.r = 1,
+		.g = 1,
+		.b = 1,
+		.t = frame_state.predictedDisplayTime / 1'000'000'000.0f - t0,
+	};
+
 	for (int swapchain_index = 0; swapchain_index < 2; swapchain_index++)
 	{
 		int image_index = swapchains[swapchain_index].acquire();
@@ -227,6 +239,7 @@ XrCompositionLayerProjection renderer::render(vk::CommandBuffer command_buffer, 
 
 		command_buffer.beginRenderPass(begin_info, vk::SubpassContents::eInline);
 		command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
+		command_buffer.pushConstants(layout, vk::ShaderStageFlagBits::eFragment, 0, sizeof(pcs), &pcs);
 		command_buffer.draw(6, 1, 0, 0);
 		command_buffer.endRenderPass();
 
