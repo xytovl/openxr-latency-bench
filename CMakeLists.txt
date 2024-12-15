@@ -3,7 +3,9 @@ project(openxr-latency-bench VERSION 0.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
+include(CompileGLSL)
 include(FetchContent)
 
 if(ANDROID)
@@ -47,13 +49,16 @@ target_link_libraries(openxr-latency-bench
 target_sources(openxr-latency-bench
 	PRIVATE
 	application.cpp
+	renderer.cpp
 	main.cpp
 	vk/error_category.cpp
 	xr/actionset.cpp
 	xr/error_category.cpp
 	xr/instance.cpp
 	xr/session.cpp
+	xr/swapchain.cpp
 	xr/system.cpp
 	xr/xr.cpp
 )
 
+bench_compile_glsl(openxr-latency-bench ${CMAKE_CURRENT_SOURCE_DIR}/noise.glsl)

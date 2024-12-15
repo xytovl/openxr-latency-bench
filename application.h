@@ -24,6 +24,8 @@
 #include "xr/session.h"
 #include "xr/system.h"
 
+#include "renderer.h"
+
 #include <unordered_set>
 #include <vector>
 #include <string>
@@ -82,8 +84,6 @@ class application
 	xr::actionset xr_actionset;
 	std::vector<std::tuple<XrAction, XrActionType, std::string>> actions;
 
-	xr::space space_view;
-	xr::space space_local;
 	xr::space space_left_grip;
 	xr::space space_right_grip;
 
@@ -93,6 +93,8 @@ class application
 	bool session_focused = false;
 	bool session_visible = false;
 
+	std::optional<renderer> r;
+
 	void initialize();
 	void initialize_vulkan();
 	void initialize_actions();
@@ -100,6 +102,7 @@ class application
 	void session_state_changed(XrSessionState new_state, XrTime timestamp);
 	void poll_events();
 	void loop();
+
 
 public:
 	application(application_info info);

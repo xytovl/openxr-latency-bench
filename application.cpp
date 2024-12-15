@@ -26,6 +26,8 @@
 #include <chrono> // IWYU pragma: keep
 #include <spdlog/spdlog.h>
 #include <unordered_set>
+#include <vulkan/vulkan_structs.hpp>
+#include <openxr/openxr_platform.h>
 
 #ifdef __ANDROID__
 #include <android/native_activity.h>
@@ -38,7 +40,7 @@ using namespace std::chrono_literals;
 
 namespace
 {
-	std::atomic<bool> exit_requested = false;
+std::atomic<bool> exit_requested = false;
 
 struct interaction_profile
 {
@@ -189,7 +191,6 @@ void application::initialize()
 {
 	// LogLayersAndExtensions
 	assert(!xr_instance);
-	xr_extensions.clear();
 
 	// Optional extensions
 	std::vector<std::string> opt_extensions;
@@ -235,9 +236,6 @@ void application::initialize()
 
 	xr_session = xr::session(xr_instance, xr_system_id, vk_instance, vk_physical_device, vk_device, vk_queue_family_index);
 
-	space_view = xr_session.create_reference_space(XR_REFERENCE_SPACE_TYPE_VIEW);
-	space_local = xr_session.create_reference_space(XR_REFERENCE_SPACE_TYPE_LOCAL);
-
 	vk::CommandPoolCreateInfo cmdpool_create_info;
 	cmdpool_create_info.queueFamilyIndex = vk_queue_family_index;
 	cmdpool_create_info.flags = vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
@@ -245,6 +243,10 @@ void application::initialize()
 	vk_cmdpool = vk::raii::CommandPool{vk_device, cmdpool_create_info};
 
 	initialize_actions();
+
+	auto view_configs = xr_system_id.view_configuration_views(XrViewConfigurationType::XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO);
+
+	r.emplace(vk_device, xr_session, vk::Extent2D{view_configs[0].recommendedImageRectWidth, view_configs[0].recommendedImageRectHeight});
 }
 
 void application::initialize_vulkan()
@@ -408,32 +410,16 @@ void application::initialize_vulkan()
 	        .pQueuePriorities = &queuePriority,
 	};
 
-	vk::PhysicalDeviceFeatures device_features{
-	        .shaderClipDistance = true,
-	        // .samplerAnisotropy = true,
+	vk::DeviceCreateInfo device_create_info{
+	        .queueCreateInfoCount = 1,
+	        .pQueueCreateInfos = &queueCreateInfo,
+	        .enabledExtensionCount = (uint32_t)vk_device_extensions.size(),
+	        .ppEnabledExtensionNames = vk_device_extensions.data(),
 	};
 
-	vk::StructureChain device_create_info{
-	        vk::DeviceCreateInfo{
-	                .queueCreateInfoCount = 1,
-	                .pQueueCreateInfos = &queueCreateInfo,
-	                .enabledExtensionCount = (uint32_t)vk_device_extensions.size(),
-	                .ppEnabledExtensionNames = vk_device_extensions.data(),
-	                .pEnabledFeatures = &device_features,
-	        },
-#ifdef __ANDROID__
-	        vk::PhysicalDeviceSamplerYcbcrConversionFeaturesKHR{
-	                .samplerYcbcrConversion = VK_TRUE,
-	        },
-#endif
-	};
-
-	vk_device = xr_system_id.create_device(vk_physical_device, device_create_info.get());
+	vk_device = xr_system_id.create_device(vk_physical_device, device_create_info);
 
 	vk_queue = vk_device.getQueue(vk_queue_family_index, 0);
-
-	vk::PipelineCacheCreateInfo pipeline_cache_info;
-	std::vector<std::byte> pipeline_cache_bytes;
 }
 
 void application::initialize_actions()
@@ -522,7 +508,7 @@ VkBool32 application::vulkan_debug_report_callback(
         const char * pMessage,
         void * pUserData)
 {
-	auto instance = (application*)pUserData;
+	auto instance = (application *)pUserData;
 	std::lock_guard lock(instance->debug_report_mutex);
 	if (instance->debug_report_ignored_objects.contains(object))
 		return VK_FALSE;
@@ -715,6 +701,35 @@ void application::loop()
 	{
 		xr_session.sync_actions(xr_actionset);
 		XrFrameState framestate = xr_session.wait_frame();
-		// TODO: render
+
+		if (not framestate.shouldRender)
+		{
+			xr_session.begin_frame();
+			xr_session.end_frame(framestate.predictedDisplayTime, {});
+			return;
+		}
+
+		vk::CommandBuffer cmd_buf = vk_device.allocateCommandBuffers(vk::CommandBufferAllocateInfo{.commandPool = *vk_cmdpool, .commandBufferCount = 1})[0].release();
+
+		xr_session.begin_frame();
+
+		cmd_buf.begin(vk::CommandBufferBeginInfo{.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
+		auto layer = r->render(cmd_buf, framestate);
+
+		std::vector<XrCompositionLayerBaseHeader*> layers;
+		layers.push_back(reinterpret_cast<XrCompositionLayerBaseHeader*>(&layer));
+
+		cmd_buf.end();
+
+		vk_queue.submit(vk::SubmitInfo{
+			.commandBufferCount = 1,
+			.pCommandBuffers = &cmd_buf
+		});
+
+		r->end_frame();
+
+		xr_session.end_frame(framestate.predictedDisplayPeriod, layers);
+
+		vk_device.waitIdle();
 	}
 }
