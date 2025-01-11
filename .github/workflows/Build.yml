@@ -1,0 +1,29 @@
+name: Build
+
+on:
+  push:
+
+jobs:
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Dependencies
+      run: |
+        sudo apt update
+        sudo apt install libvulkan-dev glslang-tools libopenxr-dev libspdlog-dev
+
+    - name: Configure
+      run: >
+        cmake
+        -B ${{github.workspace}}/build
+        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_INSTALL_PREFIX=/usr
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build

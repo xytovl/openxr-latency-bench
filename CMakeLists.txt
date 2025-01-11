@@ -26,7 +26,7 @@ if (ANDROID)
 	FetchContent_MakeAvailable(openxr_loader)
 	add_library(OpenXR::openxr_loader ALIAS openxr_loader)
 else()
-	find_package(OpenXR 1.0.26 REQUIRED)
+	find_package(OpenXR 1.0.20 REQUIRED)
 	find_package(spdlog REQUIRED)
 endif()
 
