@@ -33,7 +33,9 @@
 #include <android/native_activity.h>
 #include <sys/system_properties.h>
 #else
+#ifdef __unix__
 #include <signal.h>
+#endif
 #endif
 
 using namespace std::chrono_literals;
@@ -595,12 +597,14 @@ void application::run()
 #else
 void application::run()
 {
+#ifdef __unix__
 	struct sigaction act
 	{};
 	act.sa_handler = [](int) {
 		exit_requested = true;
 	};
 	sigaction(SIGINT, &act, nullptr);
+#endif
 
 	while (not exit_requested)
 	{

@@ -20,12 +20,16 @@
 #pragma once
 
 #include <cassert>
-#include <cxxabi.h>
 #include <string>
+
+#ifdef __GNUC__
+#include <cxxabi.h>
+#endif
 
 template <typename T>
 std::string type_name()
 {
+#ifdef __GNUC__
 	int status;
 	char * demangled = abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, &status);
 	assert(status == 0);
@@ -33,4 +37,7 @@ std::string type_name()
 	std::string s = demangled;
 	free(demangled);
 	return s;
+#else
+	return typeid(T).name();
+#endif
 }

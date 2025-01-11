@@ -29,6 +29,13 @@
 
 #include <spdlog/spdlog.h>
 
+#ifdef __unix__
+#include <strings.h>
+#else
+#include <string.h>
+#define strcasecmp _stricmp
+#endif
+
 
 #ifdef __ANDROID__
 void real_main(android_app * native_app)

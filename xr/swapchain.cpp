@@ -68,7 +68,7 @@ xr::swapchain::swapchain(xr::session & s, vk::raii::Device & device, vk::Format 
 	images_.resize(array.size());
 	for (uint32_t i = 0; i < array.size(); i++)
 	{
-		images_[i].image = array[i].image;
+		images_[i].img = array[i].image;
 
 		vk::ImageViewCreateInfo iv_create_info{
 		        .image = array[i].image,

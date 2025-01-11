@@ -26,6 +26,7 @@
 
 #include "renderer.h"
 
+#include <mutex>
 #include <unordered_set>
 #include <vector>
 #include <string>

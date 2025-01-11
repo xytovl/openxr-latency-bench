@@ -240,7 +240,7 @@ XrCompositionLayerProjection renderer::render(vk::CommandBuffer command_buffer, 
 		int image_index = swapchains[swapchain_index].acquire();
 		swapchains[swapchain_index].wait();
 
-		auto image = swapchains[swapchain_index].images()[image_index].image;
+		auto image = swapchains[swapchain_index].images()[image_index].img;
 
 		vk::RenderPassBeginInfo begin_info{
 		        .renderPass = *renderpass,

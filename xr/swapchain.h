@@ -33,7 +33,7 @@ class swapchain : public utils::handle<XrSwapchain, xrDestroySwapchain>
 public:
 	struct image
 	{
-		vk::Image image{};
+		vk::Image img = nullptr;
 		vk::raii::ImageView view = nullptr;
 	};
 
