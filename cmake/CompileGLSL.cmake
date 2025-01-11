@@ -11,7 +11,6 @@ function(compile_glsl_aux shader_stage shader_name glsl_filename output)
 
             COMMAND Vulkan::glslangValidator -V -S ${shader_stage} -D${shader_stage_upper}_SHADER ${in_file} -x -o ${shader_name}.spv
             DEPENDS ${glsl_filename}
-            VERBATIM
             APPEND
         )
 
@@ -47,8 +46,7 @@ function(bench_compile_glsl target_name)
     add_custom_command(
                 OUTPUT ${target_name}_shaders.cpp
                 COMMAND echo "};"  >> ${target_name}_shaders.cpp
-                APPEND
-                VERBATIM)
+                APPEND)
 
     target_sources(${target_name} PRIVATE ${target_name}_shaders.cpp)
 
