@@ -244,7 +244,7 @@ XrCompositionLayerProjection renderer::render(vk::CommandBuffer command_buffer, 
 
 		vk::RenderPassBeginInfo begin_info{
 		        .renderPass = *renderpass,
-		        .framebuffer = get_framebuffer(image),
+		        .framebuffer = *get_framebuffer(image),
 		        .renderArea = {
 		                .offset = {0, 0},
 		                .extent = image_size,
@@ -272,7 +272,7 @@ XrCompositionLayerProjection renderer::render(vk::CommandBuffer command_buffer, 
 
 		command_buffer.beginRenderPass(begin_info, vk::SubpassContents::eInline);
 		command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *pipeline);
-		command_buffer.pushConstants(layout, vk::ShaderStageFlagBits::eFragment, 0, sizeof(pcs), &pcs);
+		command_buffer.pushConstants(*layout, vk::ShaderStageFlagBits::eFragment, 0, sizeof(pcs), &pcs);
 		command_buffer.draw(6, 1, 0, 0);
 		command_buffer.endRenderPass();
 
