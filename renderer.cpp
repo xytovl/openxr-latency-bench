@@ -21,6 +21,7 @@
 #include "vk/pipeline.h"
 
 #include <map>
+#include <spdlog/spdlog.h>
 #include <vulkan/vulkan_enums.hpp>
 #include <vulkan/vulkan_raii.hpp>
 #include <vulkan/vulkan_structs.hpp>
@@ -37,6 +38,24 @@ renderer::renderer(vk::raii::Device & device, xr::session & session, vk::Extent2
         device(device),
         session(session),
         image_size(image_size),
+        format([](xr::session & session) {
+	        for (const auto f: session.get_swapchain_formats())
+	        {
+		        switch (f)
+		        {
+			        case vk::Format::eR8G8B8A8Unorm:
+			        case vk::Format::eR8G8B8A8Srgb:
+			        case vk::Format::eB8G8R8A8Unorm:
+			        case vk::Format::eB8G8R8A8Srgb:
+				        spdlog::info("Using swapchain format {}", vk::to_string(f));
+				        return f;
+			        default:
+				        spdlog::debug("Skip swapchain format {}", vk::to_string(f));
+				        break;
+		        }
+	        }
+	        throw std::runtime_error("No compatible swapchain format");
+        }(session)),
         layout([](vk::raii::Device & device) {
 	        vk::PushConstantRange push_constant_range{
 	                .stageFlags = vk::ShaderStageFlagBits::eFragment,

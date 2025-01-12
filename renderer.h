@@ -30,7 +30,7 @@ class renderer
 	vk::raii::Device & device;
 	xr::session & session;
 	vk::Extent2D image_size;
-	const vk::Format format = vk::Format::eR8G8B8A8Unorm;
+	const vk::Format format;
 
 	vk::raii::PipelineLayout layout;
 	vk::raii::RenderPass renderpass;
