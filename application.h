@@ -64,14 +64,20 @@ class application
 	std::vector<const char *> vk_device_extensions;
 
 	std::mutex debug_report_mutex;
-	static VkBool32 vulkan_debug_report_callback(VkDebugReportFlagsEXT flags,
-	                                             VkDebugReportObjectTypeEXT objectType,
-	                                             uint64_t object,
-	                                             size_t location,
-	                                             int32_t messageCode,
-	                                             const char * pLayerPrefix,
-	                                             const char * pMessage,
-	                                             void * pUserData);
+	static VkBool32 vulkan_debug_report_callback(
+#if VK_HEADER_VERSION >= 304
+	        vk::DebugReportFlagsEXT flags,
+	        vk::DebugReportObjectTypeEXT objectType,
+#else
+	        VkDebugReportFlagsEXT flags,
+	        VkDebugReportObjectTypeEXT objectType,
+#endif
+	        uint64_t object,
+	        size_t location,
+	        int32_t messageCode,
+	        const char * pLayerPrefix,
+	        const char * pMessage,
+	        void * pUserData);
 	std::unordered_set<uint64_t> debug_report_ignored_objects;
 	std::unordered_map<uint64_t, std::string> debug_report_object_name;
 #ifndef NDEBUG
